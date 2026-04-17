@@ -1,8 +1,8 @@
 #  Delivery Checklist — Day 12 Lab Submission
 
-> **Student Name:** _________________________  
-> **Student ID:** _________________________  
-> **Date:** _________________________
+> **Student Name:** Đỗ Xuân Bằng  
+> **Student ID:** 2A202600044  
+> **Date:** 17/04/2026
 
 ---
 
@@ -147,12 +147,22 @@ curl -X POST https://your-agent.railway.app/ask \
 - [ ] `MISSION_ANSWERS.md` completed with all exercises
 - [ ] `DEPLOYMENT.md` has working public URL
 - [ ] All source code in `app/` directory
-- [ ] `README.md` has clear setup instructions
-- [ ] No `.env` file committed (only `.env.example`)
+- [x] `README.md` has clear setup instructions
+- [x] No `.env` file committed (only `.env.example`)
 - [ ] No hardcoded secrets in code
-- [ ] Public URL is accessible and working
+- [x] Public URL is accessible and working
 - [ ] Screenshots included in `screenshots/` folder
-- [ ] Repository has clear commit history
+- [x] Repository has clear commit history
+
+### Current Status Notes
+
+- `MISSION_ANSWERS.md` hiện đã làm đến hết `Part 5`; chưa có `Part 6`, nên mình chưa tick mục “all exercises”.
+- Public URL đã verify hoạt động:
+  - `https://2a202600044-production.up.railway.app`
+- `DEPLOYMENT.md` hiện chưa có trong repo.
+- Source code final theo cấu trúc checklist hiện đang nằm trong `06-lab-complete/app/`, không phải `app/` ở repo root, nên mình chưa tick mục đó.
+- Repo có các ví dụ `develop` dùng hardcoded/demo secrets để minh hoạ anti-pattern, nên mình chưa tick mục “No hardcoded secrets in code”.
+- Thư mục `screenshots/` hiện chưa có.
 
 ---
 
@@ -188,7 +198,7 @@ done
 **Submit your GitHub repository URL:**
 
 ```
-https://github.com/your-username/day12-agent-deployment
+https://github.com/Bangdx1412/2A202600044_DoXuanBang
 ```
 
 **Deadline:** 17/4/2026

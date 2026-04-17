@@ -176,3 +176,125 @@ Client -> Nginx -> Agent -> Redis
   - vượt budget user thì raise `HTTP 402`
   - vượt global budget thì raise `HTTP 503`
 - Kết luận: solution trong đề dùng Redis và budget theo tháng, còn repo hiện tại đang demo cost guard đơn giản hơn bằng in-memory và budget theo ngày.
+
+## Part 5: Scaling & Reliability
+
+### Exercise 5.1: Health checks
+- File `05-scaling-reliability/develop/app.py` hiện đã có sẵn 2 endpoint:
+  - `GET /health`
+  - `GET /ready`
+- Kết quả test thực tế bằng `TestClient`:
+  - `GET /health` trả `200`
+  - `GET /ready` trả `200`
+  - `POST /ask?question=health check demo` trả `200`
+- Response `GET /health` có các field như:
+  - `status`
+  - `uptime_seconds`
+  - `version`
+  - `environment`
+  - `timestamp`
+  - `checks.memory`
+- Kết luận: phần health/readiness đã được implement và hoạt động khi test local.
+
+### Exercise 5.2: Graceful shutdown
+- `05-scaling-reliability/develop/app.py` đã có:
+  - `lifespan` để xử lý startup/shutdown
+  - middleware đếm `_in_flight_requests`
+  - signal handler cho `SIGTERM` và `SIGINT`
+  - `timeout_graceful_shutdown=30` trong `uvicorn.run(...)`
+- Kết quả quan sát thực tế khi test local:
+  - log startup xuất hiện: `Agent starting up...`, `Agent is ready!`
+  - log shutdown xuất hiện: `Graceful shutdown initiated...`, `Shutdown complete`
+- Ghi chú đúng thực tế: mình quan sát được cơ chế shutdown qua vòng đời app khi test local, nhưng chưa chạy đúng kịch bản `kill -TERM` như ví dụ trong lab.
+
+### Exercise 5.3: Stateless design
+- `05-scaling-reliability/production/app.py` đã được viết theo hướng session storage tách khỏi request handler:
+  - `save_session(...)`
+  - `load_session(...)`
+  - `append_to_history(...)`
+- Khi Redis không sẵn sàng, code fallback sang in-memory store.
+- Kết quả test thực tế local:
+  - `GET /health` trả `200`
+  - `GET /ready` trả `200`
+  - request đầu tiên tới `/chat` trả `200` và tạo `session_id`
+  - request thứ hai dùng lại `session_id` trả `200`
+  - `GET /chat/{session_id}/history` trả `200` với `count = 4`
+  - `DELETE /chat/{session_id}` trả `200`
+  - gọi lại history sau khi xóa trả `404`
+- Tuy nhiên, output thực tế cũng cho thấy:
+  - `Redis not available — using in-memory store (not scalable!)`
+  - `storage: in-memory`
+- Kết luận: logic session hoạt động trong local test, nhưng lần test thực tế này chưa chứng minh được stateless thật sự giữa nhiều instance vì app đang fallback sang in-memory.
+
+### Exercise 5.4: Load balancing
+- Theo `docker-compose.yml`, stack dự kiến gồm:
+  - `agent`
+  - `redis`
+  - `nginx`
+- `nginx.conf` cấu hình upstream `agent_cluster` và thêm header `X-Served-By`.
+- Mình đã bổ sung phần cấu hình tối thiểu để stack chạy được:
+  - thêm `05-scaling-reliability/production/Dockerfile`
+  - thêm `05-scaling-reliability/production/requirements.txt`
+  - sửa `docker-compose.yml` để build từ `05-scaling-reliability/production/Dockerfile`
+  - bỏ phụ thuộc vào `.env.local`
+- Lệnh chạy thực tế:
+  - `docker compose up --build --scale agent=3 -d`
+- Kết quả verify thực tế bằng `docker compose ps`:
+  - `production-agent-1` — `Up (healthy)`
+  - `production-agent-2` — `Up (healthy)`
+  - `production-agent-3` — `Up (healthy)`
+  - `production-nginx-1` — `Up`
+  - `production-redis-1` — `Up (healthy)`
+- Test qua Nginx:
+  - `curl.exe http://localhost:8080/health` trả `200`
+  - response có `storage: "redis"` và `redis_connected: true`
+- Kết luận: load balancing stack đã chạy được và traffic đã đi qua `nginx` tới các `agent` instances.
+
+### Exercise 5.5: Test stateless
+- File `05-scaling-reliability/production/test_stateless.py` có sẵn để test qua `http://localhost:8080`.
+- Sau khi stack đã lên, mình chạy thật:
+  - `python test_stateless.py`
+- Kết quả thực tế:
+  - script gửi 5 request liên tiếp
+  - các request được phục vụ bởi 3 instance khác nhau:
+    - `instance-b26b64`
+    - `instance-ea7d44`
+    - `instance-483da2`
+  - `Instances used` hiển thị đủ 3 instance
+  - conversation history cuối cùng có `10 messages`
+  - script kết thúc với dòng:
+    - `Session history preserved across all instances via Redis!`
+- Kết luận: phần stateless đã được verify end-to-end khi scale nhiều instance.
+
+### Checkpoint 5
+- `5.1`: đã verify local, health và readiness hoạt động.
+- `5.2`: code đã có graceful shutdown và có log shutdown khi test local.
+- `5.3`: local test ban đầu dùng in-memory fallback, nhưng sau khi chạy stack đầy đủ thì app dùng Redis thật.
+- `5.4`: đã verify load balancing với `nginx + 3 agent instances + redis`.
+- `5.5`: đã chạy thành công `test_stateless.py` và xác nhận history vẫn giữ được khi request đi qua nhiều instance.
+
+### Cập nhật từ terminal test thực tế
+- Bản `develop`:
+  - `GET /health` trả `200` với `status: ok`
+  - `GET /ready` trả `200` với `ready: true`
+  - `POST /ask?question=health%20check%20demo` trả `200`
+  - khi dừng app bằng `Ctrl+C`, log có:
+    - `Graceful shutdown initiated...`
+    - `Shutdown complete`
+- Bản `production`:
+  - `GET /health` trả `200` với:
+    - `status: ok`
+    - `instance_id: instance-28e443`
+    - `storage: in-memory`
+    - `redis_connected: N/A`
+  - `GET /ready` trả `200`
+  - request đầu tiên tới `/chat` tạo được `session_id`
+  - request thứ hai với cùng `session_id` vẫn trả `200`
+  - `GET /chat/{session_id}/history` trả được history
+  - `DELETE /chat/{session_id}` trả `200`
+  - gọi lại history sau khi xóa trả lỗi:
+    - `Session ... not found or expired`
+- Ghi chú:
+  - chuỗi tiếng Việt bị lỗi font trong PowerShell là vấn đề encoding của terminal
+  - lần test local ban đầu chạy ở chế độ `in-memory`
+  - khi chạy stack `5.4/5.5` qua Docker Compose, `/health` đã trả `storage: "redis"` và `redis_connected: true`
