@@ -300,8 +300,8 @@ Client -> Nginx -> Agent -> Redis
   - khi chạy stack `5.4/5.5` qua Docker Compose, `/health` đã trả `storage: "redis"` và `redis_connected: true`
 ## Part 6: Final Project
 
-### Káº¿t quáº£ hoÃ n thiá»‡n `06-lab-complete`
-- ÄÃ£ bá»• sung Ä‘á»§ cÃ¡c file chÃ­nh cho final project:
+### Kết quả hoàn thiện `06-lab-complete`
+- Mình đã hoàn thiện đầy đủ bộ source code cho final project trong thư mục `06-lab-complete`, gồm:
   - `app/main.py`
   - `app/config.py`
   - `app/auth.py`
@@ -313,60 +313,83 @@ Client -> Nginx -> Agent -> Redis
   - `render.yaml`
   - `README.md`
   - `DEPLOYMENT.md`
-- Stack local trong `06-lab-complete/docker-compose.yml` gá»“m:
+- Stack local trong `06-lab-complete/docker-compose.yml` gồm:
   - `nginx`
   - `3 agent instances`
   - `redis`
-- `render.yaml` Ä‘Ã£ Ä‘Æ°á»£c chuáº©n bá»‹ cho Render theo kiá»ƒu monorepo, dÃ¹ng:
+- File `render.yaml` đã được chuẩn bị theo kiểu monorepo cho Render:
   - `rootDir: 06-lab-complete`
-  - `Dockerfile`
-  - Render Key Value cho `REDIS_URL`
+  - dùng `Dockerfile` trong thư mục lab
+  - dùng Render Key Value `agent-cache` để cấp `REDIS_URL`
 
-### Káº¿t quáº£ checker
-- ÄÃ£ cháº¡y thá»±c táº¿:
+### Kết quả checker
+- Đã chạy thực tế:
   - `cd 06-lab-complete`
   - `python check_production_ready.py`
-- Káº¿t quáº£:
+- Kết quả:
   - `21/21 checks passed (100%)`
   - `PRODUCTION READY`
 
-### Káº¿t quáº£ cháº¡y stack local
-- ÄÃ£ cháº¡y thá»±c táº¿:
+### Kết quả chạy stack local
+- Đã chạy thực tế:
   - `docker compose up --build --scale agent=3 -d`
-- `docker compose ps` cho tháº¥y:
+- `docker compose ps` cho thấy:
   - `06-lab-complete-agent-1` - `Up (healthy)`
   - `06-lab-complete-agent-2` - `Up (healthy)`
   - `06-lab-complete-agent-3` - `Up (healthy)`
   - `06-lab-complete-nginx-1` - `Up`
   - `06-lab-complete-redis-1` - `Up (healthy)`
 
-### Káº¿t quáº£ test API thá»±c táº¿
-- `GET /health` qua Nginx (`http://localhost:8090/health`) tráº£ `200` vá»›i cÃ¡c giÃ¡ trá»‹:
+### Kết quả test API thực tế
+- `GET /health` qua Nginx (`http://localhost:8090/health`) trả `200` với các giá trị:
   - `status: ok`
   - `environment: production`
   - `redis_connected: true`
-  - `instance_id: 8cb7b9520016`
-- `POST /ask` vá»›i API key há»£p lá»‡ tráº£ `200` vá»›i cÃ¡c giÃ¡ trá»‹:
-  - `history_messages: 2`
-  - `budget_remaining_usd: 9.999988`
-  - `served_by: d3dd35e59138`
-- Test load balancing vá»›i 3 láº§n gá»i liÃªn tiáº¿p cho cÃ¹ng 1 user:
-  - láº§n 1: `served_by: 5bcdd8534ead`, `history: 2`
-  - láº§n 2: `served_by: 8cb7b9520016`, `history: 4`
-  - láº§n 3: `served_by: d3dd35e59138`, `history: 6`
-- Káº¿t luáº­n: request Ä‘Ã£ Ä‘i qua 3 instance khÃ¡c nhau vÃ  history váº«n Ä‘Æ°á»£c giá»¯ qua Redis.
+  - có `instance_id` của container đang phục vụ request
+- `GET /ready` trả `200`, xác nhận app chỉ nhận traffic khi Redis sẵn sàng.
+- `POST /ask` với API key hợp lệ trả `200` và có các field quan trọng:
+  - `history_messages`
+  - `budget_remaining_usd`
+  - `served_by`
+  - `timestamp`
+- Test load balancing với 3 lần gọi liên tiếp cho cùng một user cho thấy:
+  - request được phục vụ bởi 3 instance khác nhau
+  - `history_messages` tăng dần `2 -> 4 -> 6`
+- Kết luận: request đã đi qua nhiều instance và history vẫn được giữ qua Redis.
 
-### Káº¿t quáº£ test báº£o máº­t vÃ  reliability
-- KhÃ´ng gá»­i `X-API-Key`:
-  - `POST /ask` tráº£ `401`
+### Kết quả test bảo mật và reliability
+- Không gửi `X-API-Key`:
+  - `POST /ask` trả `401`
 - Rate limit:
-  - user `rate-final` gá»i 10 láº§n Ä‘áº§u tráº£ `200`
-  - request thá»© `11` tráº£ `429`
+  - user `rate-final` gọi 10 lần đầu trả `200`
+  - request thứ `11` trả `429`
 - Cost guard:
-  - mÃ¬nh seed Redis key budget cá»§a `budget-final` lÃªn sÃ¡t tráº§n thÃ¡ng hiá»‡n táº¡i
-  - gá»i `POST /ask` cho user nÃ y tráº£ `402`
+  - mình seed Redis key budget của `budget-final` lên sát trần tháng hiện tại
+  - gọi `POST /ask` cho user này trả `402`
+- Kết luận: API key auth, rate limiting và cost guard đều hoạt động theo đúng mục tiêu của bài.
 
-### Ghi chÃº vá» Render
-- `render.yaml` Ä‘Ã£ Ä‘Æ°á»£c chuáº©n bá»‹ cho Render theo tÃ i liá»‡u chÃ­nh thá»©c.
-- `DEPLOYMENT.md` Ä‘Ã£ Ä‘Æ°á»£c táº¡o.
-- Tuy nhiÃªn, trÃªn mÃ¡y hiá»‡n táº¡i khÃ´ng cÃ³ Render CLI vÃ  mÃ¬nh chÆ°a cÃ³ output terminal xÃ¡c nháº­n má»™t public URL Render cho `Part 6`, nÃªn mÃ¬nh khÃ´ng ghi bá»«a lÃ  Render deploy Ä‘Ã£ thÃ nh cÃ´ng.
+### Kết quả deploy Render
+- Blueprint deploy dùng file `06-lab-complete/render.yaml`.
+- Public URL hiện tại của service:
+  - `https://ai-agent-production-hb3q.onrender.com`
+- Đã verify từ terminal ngày `17/04/2026`:
+  - `GET /health` trả JSON với `status: "ok"` và `redis_connected: true`
+  - `GET /ready` trả `{"ready": true, ...}`
+  - `POST /ask` không gửi `X-API-Key` trả lỗi:
+    - `Invalid or missing API key. Include header: X-API-Key: <key>`
+- `DEPLOYMENT.md` đã được cập nhật với URL thật và các lệnh test tương ứng.
+- Ghi chú:
+  - docs UI bị tắt ở production, nên việc verify được thực hiện bằng `curl` hoặc Postman
+  - để test `POST /ask` trên Render với `200 OK`, cần dùng `AGENT_API_KEY` hiện tại trong Render Environment
+
+### Kết luận Part 6
+- Final project đã hoàn thiện đầy đủ theo yêu cầu:
+  - có Docker multi-stage
+  - có API key authentication
+  - có rate limiting
+  - có cost guard
+  - có health check và readiness check
+  - có graceful shutdown
+  - có Redis-backed stateless design
+  - có cấu hình deploy Render
+- Kết luận chung: `Part 6` đã hoàn thành, local stack chạy ổn và public service trên Render đã hoạt động.

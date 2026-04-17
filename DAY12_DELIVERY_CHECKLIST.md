@@ -143,9 +143,9 @@ curl -X POST https://your-agent.railway.app/ask \
 
 ##  Pre-Submission Checklist
 
-- [ ] Repository is public (or instructor has access)
+- [x] Repository is public (or instructor has access)
 - [x] `MISSION_ANSWERS.md` completed with all exercises
-- [ ] `DEPLOYMENT.md` has working public URL
+- [x] `DEPLOYMENT.md` has working public URL
 - [ ] All source code in `app/` directory
 - [x] `README.md` has clear setup instructions
 - [x] No `.env` file committed (only `.env.example`)
@@ -158,11 +158,15 @@ curl -X POST https://your-agent.railway.app/ask \
 
 - `MISSION_ANSWERS.md` đã được cập nhật đầy đủ từ `Part 1` đến `Part 6`.
 - Public URL đã verify hoạt động:
-  - `https://2a202600044-production.up.railway.app`
-- `DEPLOYMENT.md` đã có trong repo, nhưng chưa có output terminal xác nhận public URL Render cho `Part 6`, nên mình chưa tick mục đó.
+  - `https://ai-agent-production-hb3q.onrender.com`
+  - `GET /health` trả `status: "ok"` và `redis_connected: true`
+  - `GET /ready` trả `{"ready": true, ...}`
+- `DEPLOYMENT.md` đã được cập nhật với public URL Render thật và lệnh test tương ứng cho `Part 6`.
 - Source code final theo cấu trúc checklist hiện đang nằm trong `06-lab-complete/app/`, không phải `app/` ở repo root, nên mình chưa tick mục đó.
-- Repo có các ví dụ `develop` dùng hardcoded/demo secrets để minh hoạ anti-pattern, nên mình chưa tick mục “No hardcoded secrets in code”.
+- Repo GitHub đã truy cập public được khi kiểm tra từ bên ngoài.
+- Repo có các ví dụ `develop` và tài liệu học tập chứa chuỗi demo/fake secret để minh hoạ anti-pattern, nên mình chưa tick mục “No hardcoded secrets in code”.
 - Thư mục `screenshots/` hiện chưa có.
+- Endpoint `POST /ask` đã xác nhận yêu cầu `X-API-Key`; muốn chụp test `200 OK` thì cần dùng `AGENT_API_KEY` hiện tại trong Render Environment.
 
 ---
 
@@ -172,20 +176,24 @@ Before submitting, verify your deployment:
 
 ```bash
 # 1. Health check
-curl https://your-app.railway.app/health
+curl https://ai-agent-production-hb3q.onrender.com/health
 
 # 2. Authentication required
-curl https://your-app.railway.app/ask
+curl -X POST https://ai-agent-production-hb3q.onrender.com/ask \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"test","question":"Hello"}'
 # Should return 401
 
 # 3. With API key works
-curl -H "X-API-Key: YOUR_KEY" https://your-app.railway.app/ask \
+curl -H "X-API-Key: YOUR_KEY" https://ai-agent-production-hb3q.onrender.com/ask \
+  -H "Content-Type: application/json" \
   -X POST -d '{"user_id":"test","question":"Hello"}'
 # Should return 200
 
 # 4. Rate limiting
 for i in {1..15}; do 
-  curl -H "X-API-Key: YOUR_KEY" https://your-app.railway.app/ask \
+  curl -H "X-API-Key: YOUR_KEY" https://ai-agent-production-hb3q.onrender.com/ask \
+    -H "Content-Type: application/json" \
     -X POST -d '{"user_id":"test","question":"test"}'; 
 done
 # Should eventually return 429
@@ -195,13 +203,19 @@ done
 
 ##  Submission
 
-**Submit your GitHub repository URL:**
+**Link GitHub repository để nộp:**
 
 ```
 https://github.com/Bangdx1412/2A202600044_DoXuanBang
 ```
 
-**Deadline:** 17/4/2026
+**Link deploy public:**
+
+```
+https://ai-agent-production-hb3q.onrender.com
+```
+
+**Hạn nộp:** 17/4/2026
 
 ---
 
