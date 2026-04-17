@@ -39,4 +39,9 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: AGENT_API_KEY
-        sync: false
+        generateValue: true
+  - type: keyvalue
+    name: agent-cache
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []

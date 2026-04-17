@@ -51,15 +51,17 @@ docker compose down
 4. Đặt `Blueprint Path` là `06-lab-complete/render.yaml`
 5. Render sẽ tạo:
    - `ai-agent-production` web service
-   - `ai-agent-cache` Render Key Value
-6. Khi tạo lần đầu, nhập secrets:
-   - `AGENT_API_KEY`
-   - `OPENAI_API_KEY` nếu muốn thay mock LLM
+   - `agent-cache` Render Key Value
+6. Khi tạo lần đầu:
+   - `AGENT_API_KEY` được Render tự sinh trong Blueprint
+   - `OPENAI_API_KEY` nhập thêm nếu muốn thay mock LLM
 
 Lưu ý:
 
 - `render.yaml` đang dùng `rootDir: 06-lab-complete` vì repo này là monorepo
 - Render free web service và free key value đều hỗ trợ deploy thử nghiệm, nhưng free key value là ephemeral
+- `agent-cache` đang để `ipAllowList: []` để chặn truy cập public, app sẽ dùng private connection string nội bộ của Render
+- Nếu web service đã tồn tại và đang thiếu `AGENT_API_KEY`, vào Render Dashboard -> service `ai-agent-production` -> `Environment`, thêm biến này thủ công rồi redeploy
 
 ## Kiểm tra nhanh
 
