@@ -144,7 +144,7 @@ curl -X POST https://your-agent.railway.app/ask \
 ##  Pre-Submission Checklist
 
 - [ ] Repository is public (or instructor has access)
-- [ ] `MISSION_ANSWERS.md` completed with all exercises
+- [x] `MISSION_ANSWERS.md` completed with all exercises
 - [ ] `DEPLOYMENT.md` has working public URL
 - [ ] All source code in `app/` directory
 - [x] `README.md` has clear setup instructions
@@ -156,10 +156,10 @@ curl -X POST https://your-agent.railway.app/ask \
 
 ### Current Status Notes
 
-- `MISSION_ANSWERS.md` hiện đã làm đến hết `Part 5`; chưa có `Part 6`, nên mình chưa tick mục “all exercises”.
+- `MISSION_ANSWERS.md` đã được cập nhật đầy đủ từ `Part 1` đến `Part 6`.
 - Public URL đã verify hoạt động:
   - `https://2a202600044-production.up.railway.app`
-- `DEPLOYMENT.md` hiện chưa có trong repo.
+- `DEPLOYMENT.md` đã có trong repo, nhưng chưa có output terminal xác nhận public URL Render cho `Part 6`, nên mình chưa tick mục đó.
 - Source code final theo cấu trúc checklist hiện đang nằm trong `06-lab-complete/app/`, không phải `app/` ở repo root, nên mình chưa tick mục đó.
 - Repo có các ví dụ `develop` dùng hardcoded/demo secrets để minh hoạ anti-pattern, nên mình chưa tick mục “No hardcoded secrets in code”.
 - Thư mục `screenshots/` hiện chưa có.

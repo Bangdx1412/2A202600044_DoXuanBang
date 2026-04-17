@@ -1,7 +1,18 @@
-"""Production config — 12-Factor: tất cả từ environment variables."""
-import os
+"""Application configuration loaded from environment variables."""
 import logging
+import os
 from dataclasses import dataclass, field
+from functools import lru_cache
+
+import redis
+
+
+def _get_bool(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).lower() in {"1", "true", "yes", "on"}
+
+
+def _get_csv(name: str, default: str = "*") -> list[str]:
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
 @dataclass
@@ -10,7 +21,8 @@ class Settings:
     host: str = field(default_factory=lambda: os.getenv("HOST", "0.0.0.0"))
     port: int = field(default_factory=lambda: int(os.getenv("PORT", "8000")))
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
-    debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
+    debug: bool = field(default_factory=lambda: _get_bool("DEBUG", "false"))
+    log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))
 
     # App
     app_name: str = field(default_factory=lambda: os.getenv("APP_NAME", "Production AI Agent"))
@@ -22,34 +34,38 @@ class Settings:
 
     # Security
     agent_api_key: str = field(default_factory=lambda: os.getenv("AGENT_API_KEY", "dev-key-change-me"))
-    jwt_secret: str = field(default_factory=lambda: os.getenv("JWT_SECRET", "dev-jwt-secret"))
-    allowed_origins: list = field(
-        default_factory=lambda: os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    allowed_origins: list[str] = field(default_factory=lambda: _get_csv("ALLOWED_ORIGINS", "*"))
+
+    # Reliability / scaling
+    redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+    history_ttl_seconds: int = field(default_factory=lambda: int(os.getenv("HISTORY_TTL_SECONDS", "2592000")))
+    max_history_messages: int = field(default_factory=lambda: int(os.getenv("MAX_HISTORY_MESSAGES", "20")))
+    graceful_shutdown_timeout_seconds: int = field(
+        default_factory=lambda: int(os.getenv("GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS", "30"))
     )
 
-    # Rate limiting
+    # Controls
     rate_limit_per_minute: int = field(
-        default_factory=lambda: int(os.getenv("RATE_LIMIT_PER_MINUTE", "20"))
+        default_factory=lambda: int(os.getenv("RATE_LIMIT_PER_MINUTE", "10"))
+    )
+    monthly_budget_usd: float = field(
+        default_factory=lambda: float(os.getenv("MONTHLY_BUDGET_USD", "10.0"))
     )
 
-    # Budget
-    daily_budget_usd: float = field(
-        default_factory=lambda: float(os.getenv("DAILY_BUDGET_USD", "5.0"))
-    )
-
-    # Storage
-    redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", ""))
-
-    def validate(self):
+    def validate(self) -> "Settings":
         logger = logging.getLogger(__name__)
-        if self.environment == "production":
-            if self.agent_api_key == "dev-key-change-me":
-                raise ValueError("AGENT_API_KEY must be set in production!")
-            if self.jwt_secret == "dev-jwt-secret":
-                raise ValueError("JWT_SECRET must be set in production!")
+        if self.environment == "production" and self.agent_api_key == "dev-key-change-me":
+            raise ValueError("AGENT_API_KEY must be set in production.")
+        if not self.redis_url:
+            raise ValueError("REDIS_URL must be set.")
         if not self.openai_api_key:
-            logger.warning("OPENAI_API_KEY not set — using mock LLM")
+            logger.warning("OPENAI_API_KEY not set - using mock LLM")
         return self
 
 
 settings = Settings().validate()
+
+
+@lru_cache
+def get_redis_client():
+    return redis.from_url(settings.redis_url, decode_responses=True)

@@ -1,100 +1,76 @@
-# Lab 12 — Complete Production Agent
+# Lab 12 - Complete Production Agent
 
-Kết hợp TẤT CẢ những gì đã học trong 1 project hoàn chỉnh.
+Part 6 final project cho Day 12. Stack local gồm `nginx + 3 agent instances + redis`, còn deploy cloud được chuẩn bị sẵn bằng `render.yaml`.
 
-## Checklist Deliverable
+## Thành phần chính
 
-- [x] Dockerfile (multi-stage, < 500 MB)
-- [x] docker-compose.yml (agent + redis)
-- [x] .dockerignore
-- [x] Health check endpoint (`GET /health`)
-- [x] Readiness endpoint (`GET /ready`)
-- [x] API Key authentication
-- [x] Rate limiting
-- [x] Cost guard
-- [x] Config từ environment variables
-- [x] Structured logging
-- [x] Graceful shutdown
-- [x] Public URL ready (Railway / Render config)
+- `app/main.py`: FastAPI app, conversation history trong Redis, structured JSON logging
+- `app/auth.py`: API key authentication
+- `app/rate_limiter.py`: Redis sliding-window rate limit `10 req/phut/user`
+- `app/cost_guard.py`: Redis monthly budget guard `$10/thang/user`
+- `Dockerfile`: multi-stage, non-root, chạy được trên Render
+- `docker-compose.yml`: local stack với `agent + redis + nginx`
+- `render.yaml`: Blueprint cho Render trong monorepo này
 
----
-
-## Cấu Trúc
-
-```
-06-lab-complete/
-├── app/
-│   ├── main.py         # Entry point — kết hợp tất cả
-│   ├── config.py       # 12-factor config
-│   ├── auth.py         # API Key + JWT
-│   ├── rate_limiter.py # Rate limiting
-│   └── cost_guard.py   # Budget protection
-├── Dockerfile          # Multi-stage, production-ready
-├── docker-compose.yml  # Full stack
-├── railway.toml        # Deploy Railway
-├── render.yaml         # Deploy Render
-├── .env.example        # Template
-├── .dockerignore
-└── requirements.txt
-```
-
----
-
-## Chạy Local
+## Chạy local
 
 ```bash
-# 1. Setup
-cp .env.example .env
-
-# 2. Chạy với Docker Compose
-docker compose up
-
-# 3. Test
-curl http://localhost/health
-
-# 4. Lấy API key từ .env, test endpoint
-API_KEY=$(grep AGENT_API_KEY .env | cut -d= -f2)
-curl -H "X-API-Key: $API_KEY" \
-     -X POST http://localhost/ask \
-     -H "Content-Type: application/json" \
-     -d '{"question": "What is deployment?"}'
+cd 06-lab-complete
+docker compose up --build --scale agent=3 -d
 ```
 
----
-
-## Deploy Railway (< 5 phút)
+Test:
 
 ```bash
-# Cài Railway CLI
-npm i -g @railway/cli
-
-# Login và deploy
-railway login
-railway init
-railway variables set OPENAI_API_KEY=sk-...
-railway variables set AGENT_API_KEY=your-secret-key
-railway up
-
-# Nhận public URL!
-railway domain
+curl http://localhost:8090/health
+curl http://localhost:8090/ready
+curl -X POST http://localhost:8090/ask \
+  -H "X-API-Key: change-me-before-deploy" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"demo-user","question":"Hello"}'
 ```
 
----
+Xem history:
 
-## Deploy Render
+```bash
+curl http://localhost:8090/history/demo-user \
+  -H "X-API-Key: change-me-before-deploy"
+```
 
-1. Push repo lên GitHub
-2. Render Dashboard → New → Blueprint
-3. Connect repo → Render đọc `render.yaml`
-4. Set secrets: `OPENAI_API_KEY`, `AGENT_API_KEY`
-5. Deploy → Nhận URL!
+Dừng stack:
 
----
+```bash
+docker compose down
+```
 
-## Kiểm Tra Production Readiness
+## Deploy lên Render
+
+1. Push code lên GitHub
+2. Vào Render Dashboard -> `New -> Blueprint`
+3. Chọn repo này
+4. Đặt `Blueprint Path` là `06-lab-complete/render.yaml`
+5. Render sẽ tạo:
+   - `ai-agent-production` web service
+   - `ai-agent-cache` Render Key Value
+6. Khi tạo lần đầu, nhập secrets:
+   - `AGENT_API_KEY`
+   - `OPENAI_API_KEY` nếu muốn thay mock LLM
+
+Lưu ý:
+
+- `render.yaml` đang dùng `rootDir: 06-lab-complete` vì repo này là monorepo
+- Render free web service và free key value đều hỗ trợ deploy thử nghiệm, nhưng free key value là ephemeral
+
+## Kiểm tra nhanh
 
 ```bash
 python check_production_ready.py
 ```
 
-Script này kiểm tra tất cả items trong checklist và báo cáo những gì còn thiếu.
+## Công nghệ chính
+
+- FastAPI
+- Redis
+- Docker multi-stage
+- Nginx load balancing
+- Render Blueprint

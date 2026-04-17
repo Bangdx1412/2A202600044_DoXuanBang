@@ -298,3 +298,75 @@ Client -> Nginx -> Agent -> Redis
   - chuỗi tiếng Việt bị lỗi font trong PowerShell là vấn đề encoding của terminal
   - lần test local ban đầu chạy ở chế độ `in-memory`
   - khi chạy stack `5.4/5.5` qua Docker Compose, `/health` đã trả `storage: "redis"` và `redis_connected: true`
+## Part 6: Final Project
+
+### Káº¿t quáº£ hoÃ n thiá»‡n `06-lab-complete`
+- ÄÃ£ bá»• sung Ä‘á»§ cÃ¡c file chÃ­nh cho final project:
+  - `app/main.py`
+  - `app/config.py`
+  - `app/auth.py`
+  - `app/rate_limiter.py`
+  - `app/cost_guard.py`
+  - `utils/mock_llm.py`
+  - `Dockerfile`
+  - `docker-compose.yml`
+  - `render.yaml`
+  - `README.md`
+  - `DEPLOYMENT.md`
+- Stack local trong `06-lab-complete/docker-compose.yml` gá»“m:
+  - `nginx`
+  - `3 agent instances`
+  - `redis`
+- `render.yaml` Ä‘Ã£ Ä‘Æ°á»£c chuáº©n bá»‹ cho Render theo kiá»ƒu monorepo, dÃ¹ng:
+  - `rootDir: 06-lab-complete`
+  - `Dockerfile`
+  - Render Key Value cho `REDIS_URL`
+
+### Káº¿t quáº£ checker
+- ÄÃ£ cháº¡y thá»±c táº¿:
+  - `cd 06-lab-complete`
+  - `python check_production_ready.py`
+- Káº¿t quáº£:
+  - `21/21 checks passed (100%)`
+  - `PRODUCTION READY`
+
+### Káº¿t quáº£ cháº¡y stack local
+- ÄÃ£ cháº¡y thá»±c táº¿:
+  - `docker compose up --build --scale agent=3 -d`
+- `docker compose ps` cho tháº¥y:
+  - `06-lab-complete-agent-1` - `Up (healthy)`
+  - `06-lab-complete-agent-2` - `Up (healthy)`
+  - `06-lab-complete-agent-3` - `Up (healthy)`
+  - `06-lab-complete-nginx-1` - `Up`
+  - `06-lab-complete-redis-1` - `Up (healthy)`
+
+### Káº¿t quáº£ test API thá»±c táº¿
+- `GET /health` qua Nginx (`http://localhost:8090/health`) tráº£ `200` vá»›i cÃ¡c giÃ¡ trá»‹:
+  - `status: ok`
+  - `environment: production`
+  - `redis_connected: true`
+  - `instance_id: 8cb7b9520016`
+- `POST /ask` vá»›i API key há»£p lá»‡ tráº£ `200` vá»›i cÃ¡c giÃ¡ trá»‹:
+  - `history_messages: 2`
+  - `budget_remaining_usd: 9.999988`
+  - `served_by: d3dd35e59138`
+- Test load balancing vá»›i 3 láº§n gá»i liÃªn tiáº¿p cho cÃ¹ng 1 user:
+  - láº§n 1: `served_by: 5bcdd8534ead`, `history: 2`
+  - láº§n 2: `served_by: 8cb7b9520016`, `history: 4`
+  - láº§n 3: `served_by: d3dd35e59138`, `history: 6`
+- Káº¿t luáº­n: request Ä‘Ã£ Ä‘i qua 3 instance khÃ¡c nhau vÃ  history váº«n Ä‘Æ°á»£c giá»¯ qua Redis.
+
+### Káº¿t quáº£ test báº£o máº­t vÃ  reliability
+- KhÃ´ng gá»­i `X-API-Key`:
+  - `POST /ask` tráº£ `401`
+- Rate limit:
+  - user `rate-final` gá»i 10 láº§n Ä‘áº§u tráº£ `200`
+  - request thá»© `11` tráº£ `429`
+- Cost guard:
+  - mÃ¬nh seed Redis key budget cá»§a `budget-final` lÃªn sÃ¡t tráº§n thÃ¡ng hiá»‡n táº¡i
+  - gá»i `POST /ask` cho user nÃ y tráº£ `402`
+
+### Ghi chÃº vá» Render
+- `render.yaml` Ä‘Ã£ Ä‘Æ°á»£c chuáº©n bá»‹ cho Render theo tÃ i liá»‡u chÃ­nh thá»©c.
+- `DEPLOYMENT.md` Ä‘Ã£ Ä‘Æ°á»£c táº¡o.
+- Tuy nhiÃªn, trÃªn mÃ¡y hiá»‡n táº¡i khÃ´ng cÃ³ Render CLI vÃ  mÃ¬nh chÆ°a cÃ³ output terminal xÃ¡c nháº­n má»™t public URL Render cho `Part 6`, nÃªn mÃ¬nh khÃ´ng ghi bá»«a lÃ  Render deploy Ä‘Ã£ thÃ nh cÃ´ng.

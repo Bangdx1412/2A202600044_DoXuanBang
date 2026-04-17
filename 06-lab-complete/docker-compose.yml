@@ -1,27 +1,27 @@
-version: "3.9"
-
 services:
   agent:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - ENVIRONMENT=staging
-      - APP_NAME=Production AI Agent
-      - REDIS_URL=redis://redis:6379/0
+    build:
+      context: .
+      dockerfile: Dockerfile
     env_file:
-      - .env.local
+      - .env.example
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
     restart: unless-stopped
+    networks:
+      - agent_net
 
   redis:
     image: redis:7-alpine
@@ -31,3 +31,22 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+    restart: unless-stopped
+    networks:
+      - agent_net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8090:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - agent
+    restart: unless-stopped
+    networks:
+      - agent_net
+
+networks:
+  agent_net:
+    driver: bridge
