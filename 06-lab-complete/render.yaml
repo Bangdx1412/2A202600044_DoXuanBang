@@ -5,7 +5,7 @@ services:
     rootDir: 06-lab-complete
     dockerfilePath: Dockerfile
     dockerContext: .
-    region: singapore
+    region: oregon
     plan: free
     healthCheckPath: /health
     autoDeployTrigger: commit
@@ -34,16 +34,9 @@ services:
       - key: REDIS_URL
         fromService:
           type: keyvalue
-          name: ai-agent-cache
+          name: agent-cache
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false
       - key: AGENT_API_KEY
         sync: false
-
-  - type: keyvalue
-    name: ai-agent-cache
-    plan: free
-    region: singapore
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
